@@ -11,6 +11,7 @@ include_directories(${shared_dir}/vartypes/primitives)
 include_directories(${shared_dir}/vartypes/enhanced)
 include_directories(${shared_dir}/vartypes/gui)
 include_directories(${shared_dir}/vartypes/xml)
+include_directories(${shared_dir}/tinyxml2)
 
 set (SHARED_SRCS
 	${shared_dir}/capture/capturefromfile.cpp
@@ -94,6 +95,7 @@ set (SHARED_SRCS
 
   ${shared_dir}/util/helpers.cpp
   ${shared_dir}/util/field.cpp
+	${shared_dir}/tinyxml2/tinyxml2.cpp
 )
 
 #only ones that need to be moc'ed
@@ -126,6 +128,8 @@ set (SHARED_HEADERS
 	${shared_dir}/vartypes/gui/VarItemDelegate.h
 	${shared_dir}/vartypes/gui/VarTreeModel.h
 	${shared_dir}/vartypes/gui/VarTreeView.h
+
+	${shared_dir}/tinyxml2/tinyxml2.h
 )
 
 set (SHARED_RC

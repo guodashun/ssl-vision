@@ -6,3 +6,5 @@
 /test-data/**
 /.idea
 cmake-build*
+*.user
+

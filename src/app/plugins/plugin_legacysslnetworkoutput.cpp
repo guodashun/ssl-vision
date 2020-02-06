@@ -19,6 +19,18 @@
 */
 //========================================================================
 #include "plugin_legacysslnetworkoutput.h"
+#include "plugin_visualize.h"
+#include "image.h"
+#include "tinyxml2.h"
+#include <QDebug>
+
+using namespace tinyxml2;
+
+namespace  {
+    QString save_path = "";
+    const double ROBOT_PIXEL_SIZE = 18;
+    const double BALL_PIXEL_SIZE = 5;
+}
 
 PluginLegacySSLNetworkOutput::PluginLegacySSLNetworkOutput(
     FrameBuffer * _fb,
@@ -67,11 +79,102 @@ bool PluginLegacySSLNetworkOutput::DoubleSizeToSingleSize(
 ProcessResult PluginLegacySSLNetworkOutput::process(
     FrameData * data, RenderOptions * options) {
   (void)options;
+    qDebug() << "vision msg fuck running !";
   if (data==0) return ProcessingFailed;
 
   SSL_DetectionFrame * detection_frame = 0;
-
   detection_frame=(SSL_DetectionFrame *)data->map.get("ssl_detection_frame");
+
+  bool isRecord = false;
+
+  if (isRecord) {
+      // save image
+      rgbImage temp;
+      VisualizationFrame * vis_frame=(VisualizationFrame *)(data->map.get("vis_frame"));
+      if (vis_frame !=0 && vis_frame->valid) {
+        temp.copy ( vis_frame->data );
+      }
+      if ( temp.getWidth() > 1 && temp.getHeight() > 1 ) {
+          if ( !temp.save ( save_path.append("/img").toStdString() ) ) {
+              qDebug() << "save image faild!plz check in time";
+          }
+      }
+
+      // save annotation via detection
+      XMLDocument doc;
+      XMLElement *xml_root, *xml_object;
+      QString xml_int_path = "";
+      doc.LoadFile(xml_int_path.toLatin1());
+      xml_root = doc.RootElement();
+      xml_object = xml_root->FirstChildElement("object");
+      xml_object->DeleteChildren();
+
+      int team = 2;
+      int ball_size = detection_frame->balls_size();
+      int robot_size[team];
+      robot_size[0] = detection_frame->robots_blue_size();
+      robot_size[1] = detection_frame->robots_yellow_size();
+      SSL_DetectionBall vis_ball;
+      SSL_DetectionRobot vis_robot;
+      XMLElement *ball,*robot, *bndbox, *xmax, *xmin, *ymax, *ymin,
+                 *orientation, *id, *color;
+      // ball
+      for (int i = 0; i < ball_size; i++) {
+          vis_ball = detection_frame->balls(i);
+          ball = doc.NewElement("name");
+          ball->SetText("ball");
+          xml_object->InsertEndChild(ball);
+          bndbox = doc.NewElement("bndbox");
+          xmax = doc.NewElement("xmax");
+          xmin = doc.NewElement("xmin");
+          ymax = doc.NewElement("ymax");
+          ymin = doc.NewElement("ymin");
+          //todo
+          xmax->SetText(vis_ball.x());
+          xmin->SetText(vis_ball.x());
+          ymax->SetText(vis_ball.x());
+          ymin->SetText(vis_ball.x());
+          bndbox->InsertEndChild(xmax);
+          bndbox->InsertEndChild(xmin);
+          bndbox->InsertEndChild(ymax);
+          bndbox->InsertEndChild(ymin);
+          xml_object->InsertEndChild(bndbox);
+      }
+      // robot
+      for (int t = 0; t < team; t++) {
+          for (int i = 0; i < robot_size[t]; i++) {
+              vis_robot = t == 0 ? detection_frame->robots_blue(i) : detection_frame->robots_yellow(i);
+              xml_object = doc.NewElement("object");
+              xml_root->InsertEndChild(xml_object);
+              robot = doc.NewElement("name");
+              robot->SetText("robot");
+              bndbox = doc.NewElement("bndbox");
+              xmax = doc.NewElement("xmax");
+              xmin = doc.NewElement("xmin");
+              ymax = doc.NewElement("ymax");
+              ymin = doc.NewElement("ymin");
+              //todo
+              xmax->SetText(0);
+              xmin->SetText(0);
+              ymax->SetText(0);
+              ymin->SetText(0);
+              bndbox->InsertEndChild(xmax);
+              bndbox->InsertEndChild(xmin);
+              bndbox->InsertEndChild(ymax);
+              bndbox->InsertEndChild(ymin);
+              orientation = doc.NewElement("orientation");
+              orientation->SetText(vis_robot.orientation());
+              color = doc.NewElement("team");
+              color->SetText(t);
+              xml_object->InsertEndChild(robot);
+              xml_object->InsertEndChild(bndbox);
+              xml_object->InsertEndChild(orientation);
+              xml_object->InsertEndChild(color);
+          }
+      }
+      doc.SaveFile(save_path.append("anno").toLatin1());
+  }
+  qDebug() << "vision msg fuck running !";
   if (detection_frame != 0) {
     detection_frame->set_t_capture(data->time);
     detection_frame->set_frame_number(data->number);
