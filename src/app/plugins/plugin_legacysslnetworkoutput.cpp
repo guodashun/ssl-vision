@@ -23,13 +23,15 @@
 #include "image.h"
 #include "tinyxml2.h"
 #include <QDebug>
+#include "time.h"
+#include <QDateTime>
 
 using namespace tinyxml2;
 
 namespace  {
-    QString save_path = "";
     const double ROBOT_PIXEL_SIZE = 18;
     const double BALL_PIXEL_SIZE = 5;
+    const double TIME_INTERVEL = 5;
 }
 
 PluginLegacySSLNetworkOutput::PluginLegacySSLNetworkOutput(
@@ -40,7 +42,20 @@ PluginLegacySSLNetworkOutput::PluginLegacySSLNetworkOutput(
     VisionPlugin(_fb),
     _camera_params(camera_params),
     _field(field),
-    _ds_udp_server_old(ds_udp_server_old) {}
+    _ds_udp_server_old(ds_udp_server_old) {
+//    legacy_network_output_settings = new PluginLegacySSLNetworkOutputSettings();
+    isRecord = true;
+    save_path = "/home/zjunlict-vision-1/luckky/test_pic";
+//    save_path = "./test";
+//    connect(legacy_network_output_settings->isRecord,
+//            SIGNAL(wasEdited(VarType *)),
+//            this,
+//            SLOT(RefreshNetworkOutput()));
+//    connect(legacy_network_output_settings->save_path,
+//            SIGNAL(wasEdited(VarType *)),
+//            this,
+//            SLOT(RefreshNetworkOutput()));
+}
 
 PluginLegacySSLNetworkOutput::~PluginLegacySSLNetworkOutput() {}
 
@@ -79,15 +94,18 @@ bool PluginLegacySSLNetworkOutput::DoubleSizeToSingleSize(
 ProcessResult PluginLegacySSLNetworkOutput::process(
     FrameData * data, RenderOptions * options) {
   (void)options;
-    qDebug() << "vision msg fuck running !";
+//    qDebug() << "vision msg fuck running !";
   if (data==0) return ProcessingFailed;
 
   SSL_DetectionFrame * detection_frame = 0;
   detection_frame=(SSL_DetectionFrame *)data->map.get("ssl_detection_frame");
 
-  bool isRecord = false;
-
-  if (isRecord) {
+//  RefreshNetworkOutput();
+//  qDebug() << "for debug" << isRecord << "clock:" << record_time << "is clock:" <<  ((clock() - record_time) / CLOCKS_PER_SEC > TIME_INTERVEL);
+//  qDebug() << "clock:" << clock() << "record_time:" << record_time << "result:" << (clock() - record_time) / CLOCKS_PER_SEC ;
+  if (isRecord && (clock() - record_time) / CLOCKS_PER_SEC > TIME_INTERVEL ) {
+      record_time = clock();
+      string pic_name = "dl" + QDateTime::currentDateTime().toString("yyyy-MM-dd-HH-mm-ss").toStdString();
       // save image
       rgbImage temp;
       VisualizationFrame * vis_frame=(VisualizationFrame *)(data->map.get("vis_frame"));
@@ -95,15 +113,16 @@ ProcessResult PluginLegacySSLNetworkOutput::process(
         temp.copy ( vis_frame->data );
       }
       if ( temp.getWidth() > 1 && temp.getHeight() > 1 ) {
-          if ( !temp.save ( save_path.append("/img").toStdString() ) ) {
+          if ( !temp.save ( save_path +"/imgs/" + pic_name + ".png" ) ) {
               qDebug() << "save image faild!plz check in time";
           }
       }
 
+
       // save annotation via detection
       XMLDocument doc;
       XMLElement *xml_root, *xml_object;
-      QString xml_int_path = "";
+      QString xml_int_path = QString::fromStdString(save_path + "/template.xml");
       doc.LoadFile(xml_int_path.toLatin1());
       xml_root = doc.RootElement();
       xml_object = xml_root->FirstChildElement("object");
@@ -118,6 +137,8 @@ ProcessResult PluginLegacySSLNetworkOutput::process(
       SSL_DetectionRobot vis_robot;
       XMLElement *ball,*robot, *bndbox, *xmax, *xmin, *ymax, *ymin,
                  *orientation, *id, *color;
+      qDebug() << "robot_size:" << robot_size[0] << robot_size[1];
+
       // ball
       for (int i = 0; i < ball_size; i++) {
           vis_ball = detection_frame->balls(i);
@@ -172,9 +193,10 @@ ProcessResult PluginLegacySSLNetworkOutput::process(
               xml_object->InsertEndChild(color);
           }
       }
-      doc.SaveFile(save_path.append("anno").toLatin1());
+      QString convert = QString::fromStdString(save_path + "/anno/" + pic_name + ".xml");
+      doc.SaveFile(convert.toLatin1());
   }
-  qDebug() << "vision msg fuck running !";
+//  qDebug() << "vision msg fuck running !";
   if (detection_frame != 0) {
     detection_frame->set_t_capture(data->time);
     detection_frame->set_frame_number(data->number);
@@ -190,6 +212,11 @@ string PluginLegacySSLNetworkOutput::getName() {
   return "Legacy Network Output";
 }
 
+//void PluginLegacySSLNetworkOutput::RefreshNetworkOutput() {
+//    isRecord = legacy_network_output_settings->isRecord->getBool();
+//    save_path = legacy_network_output_settings->isRecord->getString();
+//}
+
 PluginLegacySSLNetworkOutputSettings::PluginLegacySSLNetworkOutputSettings()
 {
   settings = new VarList("Legacy Network Output");
@@ -200,6 +227,10 @@ PluginLegacySSLNetworkOutputSettings::PluginLegacySSLNetworkOutputSettings()
       new VarInt("Legacy Double-Size Field Multicast Port",10005,1,65535));
   settings->addChild(
       multicast_interface = new VarString("Multicast Interface",""));
+//  settings->addChild(
+//      isRecord = new VarBool("isRecord", false));
+//  settings->addChild(
+//      save_path = new VarString("save_path", "/home/zjunlict-vision-1/luckky/test_pic"));
 }
 
 VarList * PluginLegacySSLNetworkOutputSettings::getSettings()

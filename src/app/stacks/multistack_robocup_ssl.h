@@ -57,6 +57,12 @@ class MultiStackRoboCupSSL : public QObject, public MultiVisionStack {
   MultiStackRoboCupSSL(RenderOptions *_opts, int num_normal_camera_threads);
   virtual string getSettingsFileName();
   virtual ~MultiStackRoboCupSSL();
+//  bool getIsRecord() {
+//      return legacy_network_output_settings->isRecord->getBool();
+//  }
+//  string getSavePath() {
+//      return legacy_network_output_settings->save_path->getString();
+//  }
   public slots:
   void RefreshNetworkOutput();
   void RefreshLegacyNetworkOutput();

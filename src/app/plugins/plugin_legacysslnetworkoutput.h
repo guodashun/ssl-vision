@@ -28,13 +28,32 @@
 #include "field.h"
 #include "timer.h"
 
-class PluginLegacySSLNetworkOutput : public VisionPlugin
+class PluginLegacySSLNetworkOutputSettings {
+public:
+  VarList * settings;
+  VarString * multicast_address;
+  // UDP port for Double-Sized field, old protobuf format.
+  VarInt * ds_multicast_port_old;
+  VarString * multicast_interface;
+  VarBool * isRecord;
+  VarString * save_path;
+
+  PluginLegacySSLNetworkOutputSettings();
+  VarList * getSettings();
+};
+
+class PluginLegacySSLNetworkOutput :public VisionPlugin
 {
+//    Q_OBJECT
 protected:
  const CameraParameters& _camera_params;
  const RoboCupField& _field;
  // UDP Server for Double-Sized field, old protobuf format.
  RoboCupSSLServer * _ds_udp_server_old;
+ PluginLegacySSLNetworkOutputSettings * legacy_network_output_settings;
+ bool isRecord = false;
+ string save_path = "";
+ clock_t record_time = 0;
 
 public:
   PluginLegacySSLNetworkOutput(FrameBuffer * _fb,
@@ -54,18 +73,10 @@ public:
     float* x_out,
     float* y_out,
     float* a_out);
+  public slots:
+  void RefreshNetworkOutput();
 };
 
-class PluginLegacySSLNetworkOutputSettings {
-public:
-  VarList * settings;
-  VarString * multicast_address;
-  // UDP port for Double-Sized field, old protobuf format.
-  VarInt * ds_multicast_port_old;
-  VarString * multicast_interface;
 
-  PluginLegacySSLNetworkOutputSettings();
-  VarList * getSettings();
-};
 
 #endif
