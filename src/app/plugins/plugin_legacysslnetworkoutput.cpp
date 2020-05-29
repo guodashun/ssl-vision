@@ -31,7 +31,7 @@ using namespace tinyxml2;
 namespace  {
     const double ROBOT_PIXEL_SIZE = 18;
     const double BALL_PIXEL_SIZE = 5;
-    const double TIME_INTERVEL = 5;
+    const double TIME_INTERVEL = 2;
 }
 
 PluginLegacySSLNetworkOutput::PluginLegacySSLNetworkOutput(
@@ -172,17 +172,17 @@ ProcessResult PluginLegacySSLNetworkOutput::process(
               bndbox = doc.NewElement("bndbox");
               xmax = doc.NewElement("xmax");
               xmin = doc.NewElement("xmin");
-              ymax = doc.NewElement("ymax");
-              ymin = doc.NewElement("ymin");
-              //todo
-              xmax->SetText(0);
-              xmin->SetText(0);
-              ymax->SetText(0);
-              ymin->SetText(0);
+//              ymax = doc.NewElement("ymax");
+//              ymin = doc.NewElement("ymin");
+//              //todo
+              xmax->SetText(vis_robot.x());
+              xmin->SetText(vis_robot.y());
+//              ymax->SetText(0);
+//              ymin->SetText(0);
               bndbox->InsertEndChild(xmax);
               bndbox->InsertEndChild(xmin);
-              bndbox->InsertEndChild(ymax);
-              bndbox->InsertEndChild(ymin);
+//              bndbox->InsertEndChild(ymax);
+//              bndbox->InsertEndChild(ymin);
               orientation = doc.NewElement("orientation");
               orientation->SetText(vis_robot.orientation());
               color = doc.NewElement("team");

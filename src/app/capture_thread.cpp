@@ -23,6 +23,7 @@
 #include <capture_splitter.h>
 #include <iostream>
 #include <iomanip>
+#include <QDebug>
 
 CaptureThread::CaptureThread(int cam_id)
 {

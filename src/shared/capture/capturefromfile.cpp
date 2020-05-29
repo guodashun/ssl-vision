@@ -28,6 +28,8 @@
 #include <sstream>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include <QDebug>
+#include "time.h"
 
 
 CaptureFromFile::CaptureFromFile(VarList * _settings, int default_camera_id, QObject * parent) : QObject(parent), CaptureInterface(_settings)
@@ -193,11 +195,9 @@ bool CaptureFromFile::isImageFileName(const std::string& fileName)
 
 bool CaptureFromFile::copyAndConvertFrame(const RawImage & src, RawImage & target)
 {
-  mutex.lock();
-
+    mutex.lock();
   ColorFormat output_fmt = Colors::stringToColorFormat(v_colorout->getSelection().c_str());
   ColorFormat src_fmt = src.getColorFormat();
-
   target.ensure_allocation(output_fmt, src.getWidth(), src.getHeight());
   target.setTime(src.getTime());
   if (output_fmt == src_fmt)
@@ -248,27 +248,38 @@ bool CaptureFromFile::copyAndConvertFrame(const RawImage & src, RawImage & targe
 RawImage CaptureFromFile::getFrame()
 {
    mutex.lock();
+  static RawImage remain;
+  static clock_t one_cycle = 0;
+  if ((clock() - one_cycle) / CLOCKS_PER_SEC > 2 || one_cycle == 0) {
+      one_cycle = clock();
+      RawImage result;
+      if(images.empty())
+      {
+        fprintf (stderr, "CaptureFromFile Error, no images available");
+        is_capturing=false;
+        result.setData(nullptr);
+        result.setWidth(640);
+        result.setHeight(480);
+        result.setTime(0.0);
+      } else {
+        result = images[currentImageIndex];
+        currentImageIndex = static_cast<unsigned int>((currentImageIndex + 1) % images.size());
 
-  RawImage result;
-  if(images.empty())
-  {
-    fprintf (stderr, "CaptureFromFile Error, no images available");
-    is_capturing=false;
-    result.setData(nullptr);
-    result.setWidth(640);
-    result.setHeight(480);
-    result.setTime(0.0);
-  } else {
-    result = images[currentImageIndex];
-    currentImageIndex = static_cast<unsigned int>((currentImageIndex + 1) % images.size());
-
-    timeval tv{};
-    gettimeofday(&tv, nullptr);
-    result.setTime((double) tv.tv_sec + tv.tv_usec*(1.0E-6));
+        timeval tv{};
+        gettimeofday(&tv, nullptr);
+        result.setTime((double) tv.tv_sec + tv.tv_usec*(1.0E-6));
+      }
+        remain = result;
+      mutex.unlock();
+      return result;
   }
-
+  timeval tv{};
+  gettimeofday(&tv, nullptr);
+  remain.setTime((double) tv.tv_sec + tv.tv_usec*(1.0E-6));
   mutex.unlock();
-  return result;
+  return remain;
+
+
 }
 
 void CaptureFromFile::releaseFrame() 
